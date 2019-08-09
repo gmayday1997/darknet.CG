@@ -1,0 +1,8 @@
+classes=10
+train  = /home/online/origianl/darknet_mnist/data/mnist/mnist.train.list
+valid  = /home/online/origianl/darknet_mnist/data/mnist/mnist.valid.list
+#test  = data/mnist/mnist.test.list
+backup = /home/online/origianl/shufflenetv2.darknet/darknet/backup/
+labels = /home/online/origianl/darknet_mnist/data/mnist/mnist.labels.list
+names  = /home/online/origianl/darknet_mnist/data/mnist/mnist.names.list
+top = 1

@@ -1,0 +1,10 @@
+classes=1000
+#/media/online/ed1a2cda-d7e9-4438-8c9e-424e63a44b8d/online/dataset/imagenet
+train  = /media/online/ed1a2cda-d7e9-4438-8c9e-424e63a44b8d/online/dataset/imagenet/imagenet1k.train.list
+#train  = /home/online/imagenet_sub/imagenet1k.train.list
+valid  = /media/online/ed1a2cda-d7e9-4438-8c9e-424e63a44b8d/online/dataset/imagenet/inet.val.list
+backup = /home/online/origianl/shufflenetv2.darknet/darknet/backup
+labels = /home/online/darknet-master/data/imagenet1k.labels.list
+names  = /home/online/darknet-master/data/imagenet1k.shornames.list
+top=5
+
