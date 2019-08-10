@@ -1,4 +1,4 @@
-## Darknet is an open source neural network framework written in C and CUDA. It is fast, easy to install, and supports CPU and GPU computation.
+# Darknet is an open source neural network framework written in C and CUDA. It is fast, easy to install, and supports CPU and GPU computation.
 
 This repository is borrowed heavily from https://github.com/pjreddie/darknet and https://github.com/AlexeyAB/darknet
 
