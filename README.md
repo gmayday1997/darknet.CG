@@ -1,4 +1,6 @@
-# Darknet is an open source neural network framework written in C and CUDA. It is fast, easy to install, and supports CPU and GPU computation.
+# Darknet 
+
+Darknet is an open source neural network framework written in C and CUDA. It is fast, easy to install, and supports CPU and GPU computation.
 
 This repository is borrowed heavily from https://github.com/pjreddie/darknet and https://github.com/AlexeyAB/darknet
 
@@ -16,9 +18,13 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 
 # How to use
 
-- shufflenev2
- - for basic unit
-
+- shufflenev2: 
+  for example basic unit
+ |![basic_unit](https://img3.doubanio.com/view/status/raw/public/e99ac6d308ca60e.jpg)| ![darknet_cfg](https://img3.doubanio.com/view/status/raw/public/2928419c25e8e21.jpg)|
+ |--|--|
 - yolov3 slimming 
-
+```
   ./darknet prune ./cfg/yolov3.cfg ./cfg/yolov3.weights -rate 0.3
+```
+[!slimming](https://img1.doubanio.com/view/status/raw/public/0d1e2ae81cea1fc.jpg)
+the pruned cfg/weights are saved as ./cfg/yolov3_prune.cfg / .cfg/yolov3_prune.weights
