@@ -16,12 +16,14 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 
 ![img2](https://user-images.githubusercontent.com/8370623/29604272-d56a73f4-879b-11e7-80ea-0702de6bd584.jpg)
 
-# How to use
+## How to use
 
 - shufflenev2: 
   for example basic unit
- |![basic_unit](https://img3.doubanio.com/view/status/raw/public/e99ac6d308ca60e.jpg)| ![darknet_cfg](https://img3.doubanio.com/view/status/raw/public/2928419c25e8e21.jpg)|
- |--|--|
+  
+| ![basicunit](https://img3.doubanio.com/view/status/raw/public/e99ac6d308ca60e.jpg) | ![darknetcfg](https://img3.doubanio.com/view/status/raw/public/2928419c25e8e21.jpg) |
+|---|---|
+
 - yolov3 slimming 
 ```
   ./darknet prune ./cfg/yolov3.cfg ./cfg/yolov3.weights -rate 0.3
