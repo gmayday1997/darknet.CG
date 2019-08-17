@@ -29,5 +29,6 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 ```
   ./darknet prune ./cfg/yolov3.cfg ./cfg/yolov3.weights -rate 0.3
 ```
-![img3](https://img1.doubanio.com/view/status/raw/public/0d1e2ae81cea1fc.jpg)
-the pruned cfg/weights are saved as ./cfg/yolov3_prune.cfg / .cfg/yolov3_prune.weights
+ ![img3](https://img1.doubanio.com/view/status/raw/public/0d1e2ae81cea1fc.jpg)
+
+ the pruned cfg/weights are saved as ./cfg/yolov3_prune.cfg / .cfg/yolov3_prune.weights
