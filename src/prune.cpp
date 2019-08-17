@@ -24,7 +24,6 @@ void print_array(Dtype *array,int sz){
     }
 }
 
-
 template<typename Dtype>
 void print_array_weights(Dtype *array,int sz,FILE *fp){
     for(int i =0; i<sz;i++){
