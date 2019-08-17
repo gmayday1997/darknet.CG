@@ -14,32 +14,24 @@
 #include <vector>
 #include <fstream>
 #include "utils.h"
-
 using namespace std;
 
 // pruning yolov3 based on batch normalization slimming algrothim
-void print_vector(vector<int> indexs)
-{
-    for(vector<int>::iterator it =indexs.begin();it != indexs.end();it++)
-    {
-        cout << "the index of remain layer is: " <<*it << endl;
-    }
-}
-
-void parse_shortcut_layer(vector<int> remain_layer_indexs,network net)
-{
-    for(vector<int>::iterator it = remain_layer_indexs.begin();it!=remain_layer_indexs.end();it++)
-    {
-        int index = *it;
-        layer l = net.layers[index];
-        cout << "shorcut from maybe:" <<l.index << endl;
-    }
-}
-
 template<typename Dtype>
 void print_array(Dtype *array,int sz){
     for(int i =0; i<sz;i++){
         cout << "the " << i << " index of array is " << array[i] << endl;
+    }
+}
+
+
+template<typename Dtype>
+void print_array_weights(Dtype *array,int sz,FILE *fp){
+    for(int i =0; i<sz;i++){
+        //cout << "the " << i << " index of array is " << array[i] << endl;
+        char buff[100] = {0};
+        sprintf(buff,"the %d index of array is %f\n",i,array[i]);
+        fprintf(fp,buff);
     }
 }
 
@@ -49,6 +41,7 @@ vector<int> parse_remain_layers(network net)
     vector<int> remain_indexs;
     for(int i= 0; i < n; ++i){
         if(net.layers[i].type == SHORTCUT){
+            //cout << "index of layer:" << i << endl;
             remain_indexs.push_back(i-1);
             if(net.layers[net.layers[i].index].type != SHORTCUT){
                  remain_indexs.push_back(net.layers[i].index);
@@ -92,6 +85,7 @@ void copy_bn_scales(float *bn_values,network net,vector<int> prune_layer_indexs)
         layer l = net.layers[*it];
         float *bn_scale = l.scales;
         int sz = l.out_c;
+        cout << "size of scale at layer " << *it << " is: " << sz << endl;
         convert_abs(sz,bn_scale,1,bn_values,1);
         bn_values += sz;
     }
@@ -101,7 +95,7 @@ void compare_array_with_thresh(float* mask, float *weight,float thresh,int N, in
 
     vector<int> mask_idx(0);
     for(int i =0;i < N;++i){
-        if(weight[i] >= thresh) {
+        if(abs(weight[i]) > thresh) {
             mask[i]=1.0;
             *mask_sum +=1;
             mask_idx.push_back(i);
@@ -151,6 +145,7 @@ void write_cfg(char *filename, list *sections,network *net,vector<layer_info> pr
         section_ = (section *)n->val;
         options = section_->options;
         char *type_ = section_->type;
+        in << "#" << count << "\n";
         in <<  type_ << "\n";
         node *option_cont = options->front;
         while(option_cont){
@@ -170,29 +165,34 @@ void write_cfg(char *filename, list *sections,network *net,vector<layer_info> pr
     }
 }
 
-void copy_cpu_(float *x, float *y, float *mask,int old_len)
+void copy_cpu_(float *x, float *y, float *mask,int channel_len,int kernel_size)
 {
-    print_array(mask,old_len);
     int i=0,j=0;
-    while(j<old_len){
+    int count = 0;
+    while(j<channel_len){
         if(mask[j]){
-            float *x_i = x + j;
-            float *y_o = y + i;
-            copy_cpu(1,x_i,1,y_o,1);
+            float *x_i = x + j * kernel_size;
+            float *y_o = y + i * kernel_size;
+            copy_cpu(kernel_size,x_i,1,y_o,1);
             i ++;
             j ++;
+            count ++;
         }
-        else{j ++;}
+        else{
+            j ++;
+        }
     }
 }
 
-void save_prune_conv_weights(FILE *fp,layer l,layer_info per_layer)
+
+void save_prune_conv_weights(layer l,layer_info *per_layer)
 {
     // first step: prune kernel
-    float *prune_kernel_mask = per_layer.kernel_remain_mask;
-    int remain_kernel = per_layer.remain_kernel_number;
+    float *prune_kernel_mask = per_layer->kernel_remain_mask;
+    int remain_kernel = per_layer->remain_kernel_number;
     int ori_len = l.c * l.size * l.size;
-    int nweights = remain_kernel * ori_len;
+    int remain_len = per_layer->remain_channel_number * l.size * l.size;
+    int nweights = remain_kernel * remain_len;
     float *ori_weights = l.weights;
     float *ori_bias = l.biases;
     float *ori_scale = l.scales;
@@ -208,8 +208,9 @@ void save_prune_conv_weights(FILE *fp,layer l,layer_info per_layer)
     while(j < l.n){
             if(prune_kernel_mask[j]){
                 float *weight_i = ori_weights + j * ori_len;
-                float *weight_o = prune_kernel_weights + i * ori_len;
-                copy_cpu(ori_len,weight_i,1,weight_o,1);
+                float *weight_o = prune_kernel_weights + i * remain_len;
+                int kernel_size = l.size * l.size;
+                copy_cpu_(weight_i,weight_o,per_layer->channel_remain_mask,l.c,kernel_size);
                 float *bias_i = ori_bias + j;
                 float *bias_o = prune_kernel_bias + i;
                 copy_cpu(1,bias_i,1,bias_o,1);
@@ -230,32 +231,13 @@ void save_prune_conv_weights(FILE *fp,layer l,layer_info per_layer)
             }else{
                 j++;}
      }
-    // second step: prune channel
-
-    float *prune_channel_mask = per_layer.channel_remain_mask;
-    int remain_channel = per_layer.remain_channel_number;
-    int prune_channel_len = remain_channel * l.size * l.size;
-    int prune_nweights = remain_kernel * prune_channel_len;
-    float *prune_channel_weights = (float*)calloc(prune_nweights,sizeof(float));
-    int k=0,p=0;
-    while(p < l.c){
-            if(prune_channel_mask[p]){
-                float *prune_weight_i = prune_kernel_weights + p;
-                float *prune_weight_o = prune_channel_weights + k;
-                copy_cpu(1,prune_weight_i,1,prune_weight_o,1);
-                p++;
-                k++;
-            }else{
-                p++;
-            }
-    }
-    fwrite(prune_kernel_bias,sizeof(float),remain_kernel,fp);
+    per_layer->prune_weights = prune_kernel_weights;
+    per_layer->prune_bias = prune_kernel_bias;
     if(l.batch_normalize){
-        fwrite(prune_kernel_scale,sizeof(float),remain_kernel,fp);
-        fwrite(prune_kernel_mean,sizeof(float),remain_kernel,fp);
-        fwrite(prune_kernel_variance,sizeof(float),remain_kernel,fp);
+        per_layer->prune_scales = prune_kernel_scale;
+        per_layer->prune_means = prune_kernel_mean;
+        per_layer->prune_variance = prune_kernel_variance;
     }
-    fwrite(prune_channel_weights,sizeof(float),prune_nweights,fp);
 }
 
 int *fullelem(int num)
@@ -266,15 +248,82 @@ int *fullelem(int num)
     return elem;
 }
 
+float* reduce_sum_spatial(float *kernel,int kernel_num,int channel_num,int kernel_size)
+{
+    int channels = kernel_num * channel_num;
+    float *reduce_sum = (float*)calloc(channels, sizeof(float));
+    int kernel_sp = kernel_size * kernel_size;
+    int i;
+    for(i=0;i<channels;++i){
+        float *kernel_start = kernel + i * kernel_sp;
+        float sum_ = sum_array(kernel_start,kernel_sp);
+        reduce_sum[i]=sum_;
+    }
+    return reduce_sum;
+}
+
+float *abandoned_bias(float *remain_mask,float *bias,int bias_num){
+
+    float *abandoned_biases = (float*)calloc(bias_num,sizeof(float));
+    int i;
+    for(i=0;i < bias_num;++i){
+        float bias_ = (1-remain_mask[i]) * bias[i];
+        abandoned_biases[i] = bias_ * (bias_ > 0);
+    }
+    return abandoned_biases;
+}
+
+float *transform_mm(float* absorbed_bias,float *reduce_sum,int kernel_num,int channel_num){
+
+    float *result_mm = (float*)calloc(kernel_num,sizeof(float));
+    int i;
+    for(i=0;i< kernel_num;++i){
+        float *sum = reduce_sum + i * channel_num;
+        float dot = dot_cpu(channel_num,sum,1,absorbed_bias,1);
+        result_mm[i]=dot;
+    }
+    return result_mm;
+}
+
 void write_head2weight(FILE *fp,network net)
 {
+    uint64_t seen[] = {0};
     int major = MAJOR_VERSION;
     int minor = MINOR_VERSION;
     int revision = PATCH_VERSION;
     fwrite(&major, sizeof(int), 1, fp);
     fwrite(&minor, sizeof(int), 1, fp);
     fwrite(&revision, sizeof(int), 1, fp);
-    fwrite(net.seen, sizeof(uint64_t), 1, fp);
+    fwrite(seen, sizeof(uint64_t), 1, fp);
+}
+
+void write_weights(FILE *fp,network net,vector<layer_info> prune_layers_vec)
+{
+    int n = prune_layers_vec.size();
+    int i;
+    for(i=0; i< n;++i){
+        layer l = net.layers[i];
+        layer_info layer_ = prune_layers_vec[i];
+        LAYER_TYPE lt = layer_.type;
+        if(lt == CONVOLUTIONAL){
+            int prune_nweights = layer_.remain_kernel_number * layer_.remain_channel_number * l.size * l.size;
+            fwrite(layer_.prune_bias,sizeof(float),layer_.remain_kernel_number,fp);
+            if(l.batch_normalize){
+                fwrite(layer_.prune_scales,sizeof(float),layer_.remain_kernel_number,fp);
+                fwrite(layer_.prune_means,sizeof(float),layer_.remain_kernel_number,fp);
+                fwrite(layer_.prune_variance,sizeof(float),layer_.remain_kernel_number,fp);
+            }
+            fwrite(layer_.prune_weights,sizeof(float),prune_nweights,fp);
+        }
+    }
+}
+
+void init_value(layer_info *li){
+
+    li->remain_kernel_number=0;
+    li->remain_channel_number=0;
+    li->old_channel_number=0;
+    li->old_kernel_number=0;
 }
 
 void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
@@ -282,10 +331,8 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
     char prune_cfg[100] ={0}, prune_weights[100]={0};
     find_replace(cfgfile,".cfg","_prune.cfg",prune_cfg);
     find_replace(weightfile,".weights","_prune.weights",prune_weights);
-    FILE *fp = fopen(prune_weights,"wb");
     list *section = read_cfg(cfgfile);
     network net = parse_network_cfg_custom(cfgfile,1,1);
-    write_head2weight(fp,net);
     if(weightfile){
         load_weights(&net,weightfile);
     }else{
@@ -337,10 +384,42 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
                 per_layer.kernel_remain_mask = prune_mask;
                 per_layer.old_kernel_number = total_kernel;
                 per_layer.remain_kernel_number = kernel_mask_sum;
+                save_prune_conv_weights(net.layers[i],&per_layer);
                 prune_layer_list.push_back(per_layer);
                 prev_mask = prune_mask;
                 prev_channel_number = kernel_mask_sum;
-                save_prune_conv_weights(fp,net.layers[i],per_layer);
+                layer nextlayer = net.layers[i+1];
+                if(nextlayer.type == CONVOLUTIONAL){
+                    if(nextlayer.batch_normalize){
+                        float * reduce_sum = reduce_sum_spatial(nextlayer.weights,nextlayer.out_c,nextlayer.c,nextlayer.size);
+                        float * absorbed_bias = abandoned_bias(per_layer.kernel_remain_mask,net.layers[i].biases,per_layer.old_kernel_number);
+                        float * result = transform_mm(absorbed_bias,reduce_sum,nextlayer.out_c,nextlayer.c);
+                        float * run_mean = net.layers[i+1].rolling_mean;
+                        axpy_cpu(nextlayer.out_c,-1,result,1,run_mean,1);
+                        copy_cpu(nextlayer.out_c,run_mean,1,net.layers[i+1].rolling_mean,1);
+                    }else{
+                        float * reduce_sum = reduce_sum_spatial(nextlayer.weights,nextlayer.out_c,nextlayer.c,nextlayer.size);
+                        float * absorbed_bias = abandoned_bias(per_layer.kernel_remain_mask,net.layers[i].biases,per_layer.old_kernel_number);
+                        float * result = transform_mm(absorbed_bias,reduce_sum,nextlayer.out_c,nextlayer.c);
+                        float * bias = net.layers[i+1].biases;
+                        axpy_cpu(nextlayer.out_c,1,result,1,bias,1);
+                        copy_cpu(nextlayer.out_c,bias,1,net.layers[i+1].biases,1);
+                    }
+                }else if(nextlayer.type == MAXPOOL || nextlayer.type == AVGPOOL){
+                    layer nnlayer = net.layers[i+2];
+                    float * reduce_sum = reduce_sum_spatial(nnlayer.weights,nnlayer.out_c,nnlayer.c,nnlayer.size);
+                    float * absorbed_bias = abandoned_bias(per_layer.kernel_remain_mask,net.layers[i].biases,per_layer.old_kernel_number);
+                    float * result = transform_mm(absorbed_bias,reduce_sum,nnlayer.out_c,nnlayer.c);
+                    if(nnlayer.batch_normalize){
+                        float * run_mean = net.layers[i+2].rolling_mean;
+                        axpy_cpu(nextlayer.out_c,-1,result,1,run_mean,1);
+                        copy_cpu(nextlayer.out_c,run_mean,1,net.layers[i+2].rolling_mean,1);
+                    }else{
+                        float * bias = net.layers[i+2].biases;
+                        axpy_cpu(nextlayer.out_c,1,result,1,bias,1);
+                        copy_cpu(nextlayer.out_c,bias,1,net.layers[i+2].biases,1);
+                    }
+                }
                 cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << " count of kernel is " << per_layer.old_kernel_number \
                    << "  count of pruned kernel is " << per_layer.old_kernel_number - kernel_mask_sum << endl;
             }
@@ -349,22 +428,28 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
                 per_layer.old_index = i;
                 per_layer.type = net.layers[i].type;
                 if(per_layer.type == ROUTE){
-                   per_layer.input_layers = net.layers[i].input_layers;
-                   for(int k=0; k < net.layers[i].n;k++){
-                       per_layer.remain_channel_number += prune_layer_list[per_layer.input_layers[k]].remain_channel_number;
-                       per_layer.old_channel_number += prune_layer_list[per_layer.input_layers[k]].old_channel_number;
-                       per_layer.remain_kernel_number += prune_layer_list[per_layer.input_layers[k]].remain_kernel_number;
-                       per_layer.old_kernel_number += prune_layer_list[per_layer.input_layers[k]].old_kernel_number;
-                   }
-                   float *prune_kernel_mask = (float*)calloc(per_layer.remain_kernel_number,sizeof(float));
-                   for(int k=0; k < net.layers[i].n;k++){
-                       int len = prune_layer_list[per_layer.input_layers[k]].remain_kernel_number;
-                       copy_cpu(len,prune_kernel_mask,1,prune_layer_list[per_layer.input_layers[k]].kernel_remain_mask,1);
-                   }
-                   per_layer.kernel_remain_mask = prune_kernel_mask;
-                   prune_layer_list.push_back(per_layer);
-                   prev_channel_number = per_layer.remain_kernel_number;
-                   prev_mask = per_layer.kernel_remain_mask;
+                    init_value(&per_layer);
+                    per_layer.input_layers = net.layers[i].input_layers;
+                    int k;
+                    cout << "count is " << net.layers[i].n << endl;
+                    for(k= 0;k < net.layers[i].n;k++){
+                        per_layer.remain_kernel_number += prune_layer_list[per_layer.input_layers[k]].remain_kernel_number;
+                        per_layer.remain_channel_number += prune_layer_list[per_layer.input_layers[k]].remain_channel_number;
+                        per_layer.old_channel_number += prune_layer_list[per_layer.input_layers[k]].old_channel_number;
+                        per_layer.old_kernel_number += prune_layer_list[per_layer.input_layers[k]].old_kernel_number;
+                    }
+                    float *prune_kernel_mask = (float*)calloc(per_layer.old_kernel_number,sizeof(float));
+                    int offset = 0, len = 0;
+                    for(int k=0; k < net.layers[i].n;k++){
+                        len = prune_layer_list[per_layer.input_layers[k]].old_kernel_number;
+                        copy_cpu(len,prune_layer_list[per_layer.input_layers[k]].kernel_remain_mask,1,prune_kernel_mask + offset,1);
+                        offset = len;
+                    }
+                    per_layer.kernel_remain_mask = prune_kernel_mask;
+                    prune_layer_list.push_back(per_layer);
+                    prev_channel_number = per_layer.remain_kernel_number;
+                    prev_mask = per_layer.kernel_remain_mask;
+                    cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << endl;
                 }else if(per_layer.type == SHORTCUT){
                     int index = net.layers[i].index;
                     per_layer.old_kernel_number = prune_layer_list[index].old_kernel_number;
@@ -375,20 +460,19 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
                     prune_layer_list.push_back(per_layer);
                     prev_channel_number = per_layer.remain_kernel_number;
                     prev_mask = per_layer.kernel_remain_mask;
+                    cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << endl;
                 }else if(per_layer.type == YOLO){
                     prune_layer_list.push_back(per_layer);
+                    cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << endl;
                 }else if(per_layer.type == MAXPOOL || per_layer.type == AVGPOOL || per_layer.type == UPSAMPLE){
                     per_layer.channel_remain_mask = prev_mask;
                     per_layer.remain_channel_number = prev_channel_number;
                     per_layer.old_kernel_number = net.layers[i].out_c;
                     per_layer.old_channel_number = net.layers[i].c;
-                    per_layer.remain_kernel_number = net.layers[i].out_c;
-                    float *prune_kernel_mask = (float*)calloc(per_layer.remain_kernel_number,sizeof(float));
-                    const_cpu(per_layer.remain_kernel_number,1.0,prune_kernel_mask,1);
-                    per_layer.kernel_remain_mask = prune_kernel_mask;
+                    per_layer.remain_kernel_number = prev_channel_number;
+                    per_layer.kernel_remain_mask = prev_mask;
                     prune_layer_list.push_back(per_layer);
-                    prev_channel_number = per_layer.remain_kernel_number;
-                    prev_mask = per_layer.kernel_remain_mask;
+                    cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << endl;
                 }else{
                     prune_layer_list.push_back(per_layer);
                     cout << "this layer is not supported yet" << endl;
@@ -409,21 +493,28 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
                 float *prune_kernel_mask = (float*)calloc(per_layer.remain_kernel_number,sizeof(float));
                 const_cpu(per_layer.remain_kernel_number,1.0,prune_kernel_mask,1);
                 per_layer.kernel_remain_mask = prune_kernel_mask;
+                save_prune_conv_weights(net.layers[i],&per_layer);
                 prune_layer_list.push_back(per_layer);
                 prev_mask = prune_kernel_mask;
                 prev_channel_number = per_layer.remain_kernel_number;
-                save_prune_conv_weights(fp,net.layers[i],per_layer);
             }
             cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << " count of kernel is " << per_layer.old_kernel_number \
                << "  count of pruned kernel is " << 0 << endl;
         }
     }
+    cout << "start to write cfg file" << endl;
     write_cfg(prune_cfg, section,&net,prune_layer_list);
+    cout << "save pruned cfg file to: " << prune_cfg << endl;
+    cout << "start to write weights" << endl;
+    FILE *fp = fopen(prune_weights,"wr");
+    write_head2weight(fp,net);
+    write_weights(fp,net, prune_layer_list);
+    fclose(fp);
+    cout << "save pruned weights file to: " << prune_weights << endl;
 }
 
 void run_prune(int argc, char **argv)
 {
-    cout << "begin to prune" << endl;
     if(argc < 2){
         fprintf(stderr, "usage: %s %s [cfg] [weights] [prune_rate]\n", argv[0], argv[1]);
         return;

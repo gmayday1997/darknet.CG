@@ -16,10 +16,16 @@ struct layer_info{
     int *input_layers;
     float *channel_remain_mask;
     float *kernel_remain_mask;
+    float *prune_weights;
+    float *prune_bias;
+    float *prune_scales;
+    float *prune_means;
+    float *prune_variance;
 };
 
 extern void prune_yolov3(char *cfgfile, char *weightfile, float prune_ratio);
 extern void run_prune(int argc, char **argv);
+
 #ifdef __cplusplus
 }
 #endif
