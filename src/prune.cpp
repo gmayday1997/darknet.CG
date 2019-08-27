@@ -679,7 +679,7 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio,int shuffle,
     write_cfg(prune_cfg, section,&net,prune_layer_list);
     cout << "save pruned cfg file to: " << prune_cfg << endl;
     cout << "start to write weights" << endl;
-    FILE *fp = fopen(prune_weights,"wr");
+    FILE *fp = fopen(prune_weights,"wb");
     write_head2weight(fp,net);
     write_weights(fp,net, prune_layer_list);
     fclose(fp);
