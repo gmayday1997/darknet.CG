@@ -112,7 +112,6 @@ void copy_bn_scales(float *bn_values,network net,vector<int> prune_layer_indexs)
         layer l = net.layers[*it];
         float *bn_scale = l.scales;
         int sz = l.out_c;
-        //cout << "size of scale at layer " << *it << " is: " << sz << endl;
         convert_abs(sz,bn_scale,1,bn_values,1);
         bn_values += sz;
     }
@@ -143,7 +142,6 @@ void compare_array_with_thresh_reverse(float* mask, float *weight,float thresh,i
             *mask_sum +=1;
         }else{
            mask[i]=0.0;
-           //cout << abs(weight[i]) << endl;
         }
     }
     if(!check_reasonable(*mask_sum,N,local_prune_rate)){
