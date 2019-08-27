@@ -39,19 +39,38 @@ vector<int> parse_remain_layers(network net)
     int n = net.n;
     vector<int> remain_indexs;
     for(int i= 0; i < n; ++i){
-        if(net.layers[i].type == SHORTCUT){
-            //cout << "index of layer:" << i << endl;
-            remain_indexs.push_back(i-1);
-            if(net.layers[net.layers[i].index].type != SHORTCUT){
-                 remain_indexs.push_back(net.layers[i].index);
-            }
-        }
         if(net.layers[i].type == YOLO){
             remain_indexs.push_back(i-1);
         }
     }
     sort(remain_indexs.begin(),remain_indexs.end());
     return remain_indexs;
+}
+
+vector<vector<int>> stat_shortcut_layers(network net){
+
+    int n = net.n;
+    vector<vector<int>> shortcut_indexs;
+    for(int i=n;i >0;--i)
+    {
+        if(net.layers[i].type == SHORTCUT)
+        {
+            vector<int> shortcut_idx;
+            shortcut_idx.push_back(i-1);
+            int index = i;
+            while(net.layers[net.layers[index].index].type == SHORTCUT){
+                int idx = net.layers[index].index;
+                shortcut_idx.push_back(idx-1);
+                index = idx;
+            }
+            shortcut_idx.push_back(net.layers[index].index);
+            sort(shortcut_idx.begin(),shortcut_idx.end());
+            shortcut_indexs.push_back(shortcut_idx);
+            i = net.layers[index].index;
+        }
+    }
+    sort(shortcut_indexs.begin(),shortcut_indexs.end());
+    return shortcut_indexs;
 }
 
 int find_exist(vector<int> vec,int value)
@@ -76,6 +95,15 @@ void stat_batch_norm_count(network net,vector<int> remain_layer_indexs,vector<in
     }
 }
 
+template<typename Dtype>
+Dtype sum_array_new(Dtype *a, int n)
+{
+    int i;
+    Dtype sum = 0;
+    for(i = 0; i < n; ++i) sum += a[i];
+    return sum;
+}
+
 void copy_bn_scales(float *bn_values,network net,vector<int> prune_layer_indexs){
 
     vector<int> ::iterator it;
@@ -84,22 +112,151 @@ void copy_bn_scales(float *bn_values,network net,vector<int> prune_layer_indexs)
         layer l = net.layers[*it];
         float *bn_scale = l.scales;
         int sz = l.out_c;
-        cout << "size of scale at layer " << *it << " is: " << sz << endl;
+        //cout << "size of scale at layer " << *it << " is: " << sz << endl;
         convert_abs(sz,bn_scale,1,bn_values,1);
         bn_values += sz;
     }
 }
 
-void compare_array_with_thresh(float* mask, float *weight,float thresh,int N, int *mask_sum){
+int check_reasonable(int prune_sum,int N,float local_prune_rate){
 
-    vector<int> mask_idx(0);
+    float curr_prune_rate = float(prune_sum) / N;
+    if(curr_prune_rate < local_prune_rate){
+        return 0;
+    }else return 1;
+}
+
+int must_prune(int prune_sum,int N){
+
+    float curr_prune_rate = float(prune_sum) / N;
+    if(curr_prune_rate > 0.8){
+        return 1;
+    }else return 0;
+}
+
+void compare_array_with_thresh_reverse(float* mask, float *weight,float thresh,int N, int *mask_sum,float local_prune_rate){
+
+    local_prune_rate = 0.3;
+    for(int i =0;i < N;++i){
+        if(abs(weight[i]) < thresh) {
+            mask[i]=1.0;
+            *mask_sum +=1;
+        }else{
+           mask[i]=0.0;
+           //cout << abs(weight[i]) << endl;
+        }
+    }
+    if(!check_reasonable(*mask_sum,N,local_prune_rate)){
+
+        float * abs_weights = (float*)calloc(N,sizeof(float));
+        convert_abs(N,weight,1,abs_weights,1);
+        sort(abs_weights,abs_weights + N);
+        thresh = abs_weights[int((1 - local_prune_rate) * N) -1];
+        *mask_sum = 0;
+        compare_array_with_thresh_reverse(mask,weight,thresh,N,mask_sum,local_prune_rate);
+        free(abs_weights);
+    }
+}
+
+void compare_array_with_thresh(float* mask, float *weight,float thresh,int N, int *mask_sum,float local_prune_rate){
+
     for(int i =0;i < N;++i){
         if(abs(weight[i]) > thresh) {
             mask[i]=1.0;
             *mask_sum +=1;
-            mask_idx.push_back(i);
         }
         else mask[i]=0.0;
+    }
+    if(!check_reasonable(*mask_sum,N,local_prune_rate)){
+
+        float * abs_weights = (float*)calloc(N,sizeof(float));
+        convert_abs(N,weight,1,abs_weights,1);
+        sort(abs_weights,abs_weights + N);
+        thresh = abs_weights[int((1 - local_prune_rate) * N) -1];
+        *mask_sum = 0;
+        compare_array_with_thresh(mask,weight,thresh,N,mask_sum,local_prune_rate);
+    }
+}
+
+template<typename Dtype>
+Dtype get_max_value(vector<Dtype> idx,vector<Dtype>masks)
+{
+    vector<int> remain_masks;
+    for(vector<int>::iterator i=idx.begin();i!=idx.end();i++){
+        int index = *i;
+        remain_masks.push_back(masks[index]);
+    }
+    Dtype max_ = *max_element(remain_masks.begin(),remain_masks.end());
+    return max_;
+}
+
+template<typename Dtype>
+Dtype get_min_value(vector<Dtype> idx,vector<Dtype>masks)
+{
+    vector<int> remain_masks;
+    for(vector<int>::iterator i=idx.begin();i!=idx.end();i++){
+        int index = *i;
+        remain_masks.push_back(masks[index]);
+    }
+    Dtype min_ = *min_element(remain_masks.begin(),remain_masks.end());
+    return min_;
+}
+
+void computer_masks_for_random_pruning(float *mask,int N,int *mask_sum,float prune_rate)
+{
+
+    const_cpu(N,0.0,mask,1);
+    int prune_one = N - int(N * prune_rate);
+    *mask_sum = prune_one;
+    float *one_mask = (float*)calloc(prune_one,sizeof(float));
+    const_cpu(prune_one,1.0,one_mask,1);
+    copy_cpu(prune_one,one_mask,1,mask,1);
+    shuffle(mask,N,sizeof(float));
+}
+
+void computer_threshold_for_each_layer(network net,vector<vector<int>> shortcut_index,\
+                                       float thresh,float local_prune_thresh, float *thresholds,\
+                                       vector<int> pruned_layers,int reverse)
+{
+    int i;
+    vector<int> masks;
+    for(i=0;i < net.n;++i){
+        int mask_sum=0;
+        if(find_exist(pruned_layers,i))
+        {
+           float *bn_scales = net.layers[i].scales;
+           float *bn_masks = (float*)calloc(net.layers[i].out_c,sizeof(float));
+           if(!reverse)
+               compare_array_with_thresh(bn_masks,bn_scales,thresh,net.layers[i].out_c,&mask_sum,local_prune_thresh);
+           else{
+               compare_array_with_thresh_reverse(bn_masks,bn_scales,thresh,net.layers[i].out_c,&mask_sum,local_prune_thresh);
+           }
+           thresholds[i] = thresh;
+           free(bn_masks);
+        }
+        masks.push_back(mask_sum);
+    }
+    vector<vector<int>>::iterator its = shortcut_index.begin();
+    for(its;its!=shortcut_index.end();its++){
+        vector<int> it = *its;
+           int max_ = 0;
+           if(!reverse)
+               max_ = get_max_value(it,masks);
+           else max_ = get_min_value(it,masks);
+           for(vector<int>::iterator i=it.begin();i!=it.end();i++){
+            int index = *i;
+            if(masks[index]!=max_){
+                int N = net.layers[index].out_c;
+                float *weights = net.layers[index].scales;
+                float * abs_weights = (float*)calloc(N,sizeof(float));
+                convert_abs(N,weights,1,abs_weights,1);
+                sort(abs_weights,abs_weights + N);
+                float thresh = 0.0;
+                if(reverse)  thresh = abs_weights[max_];
+                else  thresh = abs_weights[N-max_-1];
+                thresholds[index] = thresh;
+            }
+        }
     }
 }
 
@@ -247,6 +404,14 @@ int *fullelem(int num)
     return elem;
 }
 
+float scale_sum_array(float *a, int n,float scale)
+{
+    int i;
+    float sum = 0;
+    for(i = 0; i < n; ++i) sum += scale*a[i];
+    return sum;
+}
+
 float* reduce_sum_spatial(float *kernel,int kernel_num,int channel_num,int kernel_size)
 {
     int channels = kernel_num * channel_num;
@@ -325,7 +490,7 @@ void init_value(layer_info *li){
     li->old_kernel_number=0;
 }
 
-void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
+void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio,int shuffle,int reverse)
 {
     char prune_cfg[100] ={0}, prune_weights[100]={0};
     find_replace(cfgfile,".cfg","_prune.cfg",prune_cfg);
@@ -340,7 +505,10 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
     }
     vector<int> remain_layer_indexs;
     vector<int> prune_layer_indexs;
+    vector<vector<int>> shortcut_layer_indexs;
+    shortcut_layer_indexs = stat_shortcut_layers(net);
     remain_layer_indexs =  parse_remain_layers(net);
+    float local_prune_ratio = 0.1;
     int bn_total_count=0;
     cout << "starting to compute prune threshold" << endl;
     stat_batch_norm_count(net,remain_layer_indexs,&prune_layer_indexs, &bn_total_count);
@@ -349,9 +517,11 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
     float *bn_values_copy = (float*)calloc(bn_total_count,sizeof(float));
     copy_cpu(bn_total_count,bn_values,1,bn_values_copy,1);
     sort(bn_values_copy,bn_values_copy + bn_total_count);
+    float *thresholds = (float*)calloc(net.n,sizeof(float));
     int thresh_index = int(bn_total_count * prune_ratio);
     float thresh = bn_values_copy[thresh_index];
     cout << "pruning threshold is: " << thresh << endl;
+    computer_threshold_for_each_layer(net,shortcut_layer_indexs,thresh,local_prune_ratio,thresholds,prune_layer_indexs,reverse);
     vector<layer_info> prune_layer_list;
     cout << "network slimming starting" << endl;
     float *prev_mask;
@@ -368,7 +538,14 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
                 per_layer.old_channel_number = net.layers[i].c;
                 int total_kernel = net.layers[i].out_c;
                 float *prune_mask = (float*)calloc(total_kernel,sizeof(float));
-                compare_array_with_thresh(prune_mask,net.layers[i].scales,thresh,total_kernel, &kernel_mask_sum);
+                if(shuffle){
+                    computer_masks_for_random_pruning(prune_mask,total_kernel, &kernel_mask_sum,prune_ratio);
+                }
+                else if(reverse){
+                     compare_array_with_thresh_reverse(prune_mask,net.layers[i].scales,thresholds[i],total_kernel, &kernel_mask_sum,local_prune_ratio);
+                }else{
+                    compare_array_with_thresh(prune_mask,net.layers[i].scales,thresholds[i],total_kernel, &kernel_mask_sum,local_prune_ratio);
+                }
                 if(i ==0)
                 {
                     float const_mask[] = {1,1,1};
@@ -389,23 +566,23 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
                 prev_channel_number = kernel_mask_sum;
                 layer nextlayer = net.layers[i+1];
                 if(nextlayer.type == CONVOLUTIONAL){
+
+                    float * reduce_sum = reduce_sum_spatial(nextlayer.weights,nextlayer.out_c,nextlayer.c,nextlayer.size);
+                    float * absorbed_bias = abandoned_bias(per_layer.kernel_remain_mask,net.layers[i].biases,per_layer.old_kernel_number);
+                    float * result = transform_mm(absorbed_bias,reduce_sum,nextlayer.out_c,nextlayer.c);
                     if(nextlayer.batch_normalize){
-                        float * reduce_sum = reduce_sum_spatial(nextlayer.weights,nextlayer.out_c,nextlayer.c,nextlayer.size);
-                        float * absorbed_bias = abandoned_bias(per_layer.kernel_remain_mask,net.layers[i].biases,per_layer.old_kernel_number);
-                        float * result = transform_mm(absorbed_bias,reduce_sum,nextlayer.out_c,nextlayer.c);
                         float * run_mean = net.layers[i+1].rolling_mean;
                         axpy_cpu(nextlayer.out_c,-1,result,1,run_mean,1);
                         copy_cpu(nextlayer.out_c,run_mean,1,net.layers[i+1].rolling_mean,1);
                     }else{
-                        float * reduce_sum = reduce_sum_spatial(nextlayer.weights,nextlayer.out_c,nextlayer.c,nextlayer.size);
-                        float * absorbed_bias = abandoned_bias(per_layer.kernel_remain_mask,net.layers[i].biases,per_layer.old_kernel_number);
-                        float * result = transform_mm(absorbed_bias,reduce_sum,nextlayer.out_c,nextlayer.c);
                         float * bias = net.layers[i+1].biases;
                         axpy_cpu(nextlayer.out_c,1,result,1,bias,1);
                         copy_cpu(nextlayer.out_c,bias,1,net.layers[i+1].biases,1);
                     }
                 }else if(nextlayer.type == MAXPOOL || nextlayer.type == AVGPOOL){
+                    if(i + 2 >= net.n) continue;
                     layer nnlayer = net.layers[i+2];
+                    if(nnlayer.type == ROUTE || nnlayer.type == SHORTCUT) continue;
                     float * reduce_sum = reduce_sum_spatial(nnlayer.weights,nnlayer.out_c,nnlayer.c,nnlayer.size);
                     float * absorbed_bias = abandoned_bias(per_layer.kernel_remain_mask,net.layers[i].biases,per_layer.old_kernel_number);
                     float * result = transform_mm(absorbed_bias,reduce_sum,nnlayer.out_c,nnlayer.c);
@@ -430,7 +607,6 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio)
                     init_value(&per_layer);
                     per_layer.input_layers = net.layers[i].input_layers;
                     int k;
-                    cout << "count is " << net.layers[i].n << endl;
                     for(k= 0;k < net.layers[i].n;k++){
                         per_layer.remain_kernel_number += prune_layer_list[per_layer.input_layers[k]].remain_kernel_number;
                         per_layer.remain_channel_number += prune_layer_list[per_layer.input_layers[k]].remain_channel_number;
@@ -521,5 +697,7 @@ void run_prune(int argc, char **argv)
     char *cfg = argv[2];
     char *weights = argv[3];
     float prune_rate = find_float_arg(argc, argv, "-rate", .3);
-    prune_yolov3(cfg,weights,prune_rate);
+    int shuffle = find_int_arg(argc,argv,"-shuffle",0);
+    int reverse = 0;
+    prune_yolov3(cfg,weights,prune_rate,shuffle,reverse);
 }

@@ -23,7 +23,8 @@ struct layer_info{
     float *prune_variance;
 };
 
-extern void prune_yolov3(char *cfgfile, char *weightfile, float prune_ratio);
+extern void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio,int shuffle,int reverse);
+//extern void prune_yolov3(char *cfgfile, char *weightfile, float prune_ratio);
 extern void run_prune(int argc, char **argv);
 
 #ifdef __cplusplus
