@@ -32,7 +32,7 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 ```
  the pruned cfg/weights are saved as ./cfg/yolov3_prune.cfg  ./cfg/yolov3_prune.weights
  
-## results
+## Results
  - yolov3 slimming(coco)
  
 |         yolov3       | volume(MB) | FLOPS |Map(coco_val5k @0.5)|  finetuning iters |   parameters |
