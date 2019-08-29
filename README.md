@@ -24,7 +24,9 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 | ![basicunit](https://img3.doubanio.com/view/status/raw/public/e99ac6d308ca60e.jpg) | ![darknetcfg](https://img3.doubanio.com/view/status/raw/public/2928419c25e8e21.jpg) |
 |---|---|
 
-- yolov3 slimming 
+- yolov3 slimming
+
+  Support: yolov3-tiny, yolov3, yolov3-spp
 ```
   ./darknet prune ./cfg/yolov3.cfg ./cfg/yolov3.weights -rate 0.3
 ```
