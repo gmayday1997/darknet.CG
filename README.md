@@ -42,9 +42,10 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 
  - download link of pruned cfg/model
  
-  pruned @prune_rate=0.3: [cfg(google driver)](https://drive.google.com/file/d/1eQdmLB4aJtScBicjOdC2L9IUxoRqi6p-/view?usp=sharing),[weight(google driver)](https://drive.google.com/file/d/1-WIkaWsvK61_B2NuEGdMtNWxgGemUCyQ/view?usp=sharing) 
+  pruned @prune_rate=0.3: [cfg(google driver)](https://drive.google.com/file/d/1eQdmLB4aJtScBicjOdC2L9IUxoRqi6p-/view?usp=sharing),[weight(google driver)](https://drive.google.com/file/d/1-WIkaWsvK61_B2NuEGdMtNWxgGemUCyQ/view?usp=sharing) OR [cfg(baidupan)]( https://pan.baidu.com/s/19OIjfVvOTfAw-5Y9Fp5HuQ)(s846),[weight(baidupan)](https://pan.baidu.com/s/1XNx6Bfc42C2tSSYkG8iUhQ)(eswd) 
   
-  pruned @prune_rate=0.5: [cfg(google driver)](https://drive.google.com/file/d/1MLKcYBFDLmhW4fwgY7dbcMAkALDt_b0B/view?usp=sharing),[weight(google driver)](https://drive.google.com/file/d/1F_EEqekMqdo9nc0x126gcyVsChhnh6zU/view?usp=sharing)
+ pruned @prune_rate=0.5: [cfg(google driver)](https://drive.google.com/file/d/1MLKcYBFDLmhW4fwgY7dbcMAkALDt_b0B/view?usp=sharing),[weight(google driver)](https://drive.google.com/file/d/1F_EEqekMqdo9nc0x126gcyVsChhnh6zU/view?usp=sharing) OR
+  [cfg(baidupan)](https://pan.baidu.com/s/1wMhOae8B6ey_nIPfWKWQow)(y9gk), [weight(baidupan)](https://pan.baidu.com/s/1ONDkFCcFsKyH3ccpIh2CuQ)(5eqt)
 
  <!-- ![img3](https://img1.doubanio.com/view/status/raw/public/0d1e2ae81cea1fc.jpg) -->
 
