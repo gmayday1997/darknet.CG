@@ -42,7 +42,7 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 |pruned @prune_rate=0.5|     60.5   |  16   |        49.2        |        16w        |    0.25x     |
 |pruned @prune_rate=0.7|     31     |  7    |   in processing    |                   |    0.125x    |
 
- - download link of pruned cfg/model
+ - download links to pruned cfgs/models
  
   pruned @prune_rate=0.3: [cfg(google driver)](https://drive.google.com/file/d/1eQdmLB4aJtScBicjOdC2L9IUxoRqi6p-/view?usp=sharing),[weight(google driver)](https://drive.google.com/file/d/1-WIkaWsvK61_B2NuEGdMtNWxgGemUCyQ/view?usp=sharing) OR [cfg(baidupan)]( https://pan.baidu.com/s/19OIjfVvOTfAw-5Y9Fp5HuQ)(s846),[weight(baidupan)](https://pan.baidu.com/s/1XNx6Bfc42C2tSSYkG8iUhQ)(eswd) 
   
