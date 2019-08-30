@@ -37,9 +37,9 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
  
 |         yolov3       | volume(MB) | FLOPS |Map(coco_val5k @0.5)|  finetuning iters |   parameters |
 |:--------------------:|:----------:|:-----:|:------------------:|:-----------------:|:------------:|
-|    before pruned     |     246    |   65  |        54.65       |        50w        |      1x      |
-|pruned @prune_rate=0.3|     122    |  36.3 |        48.1        |         8w        |     0.5x     |
-|pruned @prune_rate=0.5|     60.5   |  16   |        49.2        |        16w        |    0.25x     |
+|    before pruned     |     246    |   65  |        54.65       |       500k        |      1x      |
+|pruned @prune_rate=0.3|     122    |  36.3 |        48.1        |        80k        |     0.5x     |
+|pruned @prune_rate=0.5|     60.5   |  16   |        49.2        |       160k        |    0.25x     |
 |pruned @prune_rate=0.7|     31     |  7    |   in processing    |                   |    0.125x    |
 
 - speed test(experiment on 1080Ti)
