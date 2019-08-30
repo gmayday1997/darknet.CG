@@ -42,6 +42,15 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 |pruned @prune_rate=0.5|     60.5   |  16   |        49.2        |        16w        |    0.25x     |
 |pruned @prune_rate=0.7|     31     |  7    |   in processing    |                   |    0.125x    |
 
+- speed test(experiment on 1080Ti)
+
+|         yolov3       | volume(MB) | FLOPS |    FPS(352x 288)   |  FPS(960 x 540)   |   FPS(1960 x 1080) |
+|:--------------------:|:----------:|:-----:|:------------------:|:-----------------:|:------------------:|
+|    before pruned     |     246    |   65  |         60         |         57        |          53        |
+|pruned @prune_rate=0.3|     122    |  36.3 |         82         |         78        |          76        |
+|pruned @prune_rate=0.5|     60.5   |  16   |        107         |         105       |          97        |
+|pruned @prune_rate=0.7|     31     |  7    |   in processing    |                   |                    |
+
  - download links to pruned cfgs/models
  
   pruned @prune_rate=0.3: [cfg(google driver)](https://drive.google.com/file/d/1eQdmLB4aJtScBicjOdC2L9IUxoRqi6p-/view?usp=sharing),[weight(google driver)](https://drive.google.com/file/d/1-WIkaWsvK61_B2NuEGdMtNWxgGemUCyQ/view?usp=sharing) OR [cfg(baidupan)]( https://pan.baidu.com/s/19OIjfVvOTfAw-5Y9Fp5HuQ)(s846),[weight(baidupan)](https://pan.baidu.com/s/1XNx6Bfc42C2tSSYkG8iUhQ)(eswd) 
