@@ -587,7 +587,7 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio,int shuffle,
                 }else if(nextlayer.type == MAXPOOL || nextlayer.type == AVGPOOL){
                     if(i + 2 >= net.n) continue;
                     layer nnlayer = net.layers[i+2];
-                    if(nnlayer.type == ROUTE || nnlayer.type == SHORTCUT) continue;
+                    if(nnlayer.type == ROUTE || nnlayer.type == SHORTCUT || nnlayer.type == DROPOUT || per_layer.type == UPSAMPLE) continue;
                     float * reduce_sum = reduce_sum_spatial(nnlayer.weights,nnlayer.out_c,nnlayer.c,nnlayer.size);
                     float * absorbed_bias = abandoned_bias(per_layer.kernel_remain_mask,net.layers[i].biases,per_layer.old_kernel_number);
                     float * result = transform_mm(absorbed_bias,reduce_sum,nnlayer.out_c,nnlayer.c);
@@ -641,10 +641,10 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio,int shuffle,
                     prev_channel_number = per_layer.remain_kernel_number;
                     prev_mask = per_layer.kernel_remain_mask;
                     cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << endl;
-                }else if(per_layer.type == YOLO || per_layer.type == SOFTMAX){
+                }else if(per_layer.type == YOLO || per_layer.type == SOFTMAX || per_layer.type == COST || per_layer.type == CROP){
                     prune_layer_list.push_back(per_layer);
                     cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << endl;
-                }else if(per_layer.type == MAXPOOL || per_layer.type == AVGPOOL || per_layer.type == UPSAMPLE){
+                }else if(per_layer.type == MAXPOOL || per_layer.type == AVGPOOL || per_layer.type == UPSAMPLE || per_layer.type == DROPOUT){
                     per_layer.channel_remain_mask = prev_mask;
                     per_layer.remain_channel_number = prev_channel_number;
                     per_layer.old_kernel_number = net.layers[i].out_c;
