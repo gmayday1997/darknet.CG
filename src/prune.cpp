@@ -42,6 +42,13 @@ vector<int> parse_remain_layers(network net)
         if(net.layers[i].type == YOLO){
             remain_indexs.push_back(i-1);
         }
+        if(net.layers[i].type == SOFTMAX){
+            int idx = i;
+            while(net.layers[idx].type != CONVOLUTIONAL){
+                idx -= 1;
+            }
+            remain_indexs.push_back(idx);
+        }
     }
     sort(remain_indexs.begin(),remain_indexs.end());
     return remain_indexs;
@@ -634,7 +641,7 @@ void prune_yolov3(char *cfgfile, char *weightfile,float prune_ratio,int shuffle,
                     prev_channel_number = per_layer.remain_kernel_number;
                     prev_mask = per_layer.kernel_remain_mask;
                     cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << endl;
-                }else if(per_layer.type == YOLO){
+                }else if(per_layer.type == YOLO || per_layer.type == SOFTMAX){
                     prune_layer_list.push_back(per_layer);
                     cout<< "layer_" << i << ":" << get_layer_string(per_layer.type) << endl;
                 }else if(per_layer.type == MAXPOOL || per_layer.type == AVGPOOL || per_layer.type == UPSAMPLE){
