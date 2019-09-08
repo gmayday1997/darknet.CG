@@ -40,7 +40,7 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 |    before pruned     |     246    |   65  |        54.65       |       500k        |      1x      |
 |pruned @prune_rate=0.3|     122    |  36.3 |        48.1        |        80k        |     0.5x     |
 |pruned @prune_rate=0.5|     60.5   |  16   |        49.2        |       160k        |    0.25x     |
-|pruned @prune_rate=0.7|     31     |  8.2  |        45(so far)  |                   |    0.125x    |
+|pruned @prune_rate=0.7|     31     |  8.2  |        46          |       200k        |    0.125x    |
 | tiny-yolov3(official)|     36     |  5.5  |        17.3        |                   |              |
 |    tiny-yolov3_3l    |     38     |  9.1  |        32          |                   |              |
 
@@ -51,7 +51,7 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 |    before pruned     |     246    |   65  |         60         |         57        |          53        |
 |pruned @prune_rate=0.3|     122    |  36.3 |         82         |         78        |          76        |
 |pruned @prune_rate=0.5|     60.5   |  16   |        107         |         105       |          97        |
-|pruned @prune_rate=0.7|     31     |  8.2  |   in processing    |                   |                    |
+|pruned @prune_rate=0.7|     31     |  8.2  |        130         |         123       |         120        |
 
 - speed test(experiment on XiaoMI laptop (Intel(R)Core(TM)i5-8250U CPU@1.6GHZ))
 
