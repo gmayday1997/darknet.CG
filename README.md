@@ -68,6 +68,8 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
   
  pruned @prune_rate=0.5: [cfg(google driver)](https://drive.google.com/file/d/1MLKcYBFDLmhW4fwgY7dbcMAkALDt_b0B/view?usp=sharing),[weight(google driver)](https://drive.google.com/file/d/1F_EEqekMqdo9nc0x126gcyVsChhnh6zU/view?usp=sharing) OR
   [cfg(baidupan)](https://pan.baidu.com/s/1wMhOae8B6ey_nIPfWKWQow)(y9gk), [weight(baidupan)](https://pan.baidu.com/s/1ONDkFCcFsKyH3ccpIh2CuQ)(5eqt)
-
+  
+   pruned @prune_rate=0.7: [cfg(google driver)](https://drive.google.com/file/d/1m6OAdFqH6frGvbyyk_3k-K-w0bugUS_6/view?usp=sharing),[weight(google driver)](https://drive.google.com/file/d/1FlXLbvo-0Rzf2d6amHlD2cHkO973_Eqc/view?usp=sharing) OR [cfg(baidupan)](https://pan.baidu.com/s/1hGc0Kzh3Tq0JHzxy0CzH1Q)(xh1d), [weight(baidupan)](https://pan.baidu.com/s/1KrwG7xxI8XQImWSc8PflJg)(ump7)
+   
  <!-- ![img3](https://img1.doubanio.com/view/status/raw/public/0d1e2ae81cea1fc.jpg) -->
 
