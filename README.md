@@ -33,6 +33,14 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
  the pruned cfg/weights are saved as ./cfg/yolov3_prune.cfg  ./cfg/yolov3_prune.weights
  
 ## Results
+
+ - shufflenetv2
+ 
+ Top1: 0.52 Top5: 0.75
+ 
+ shuffle_imagenet.cfg : [shuffle_imagenet.cfg.txt](https://github.com/AlexeyAB/darknet/files/3619916/shuffle_imagenet.cfg.txt)
+ shuffle_imagenet.weights: [google driver](https://drive.google.com/file/d/1e1e1v2E659B3wxzJYHwlabjXfFwmgCmn/view?usp=sharing) OR [baidu  pan](https://pan.baidu.com/s/1RdDIsuc5tAgbq39naqQ_xA) (2eyp)
+
  - yolov3 slimming(coco)
  
 |         yolov3       | volume(MB) | FLOPS |Map(coco_val5k @0.5)|  finetuning iters |   parameters |
