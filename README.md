@@ -46,7 +46,7 @@ This repository is borrowed heavily from https://github.com/pjreddie/darknet and
 |         yolov3       | volume(MB) | FLOPS |Map(coco_val5k @0.5)|  finetuning iters |   parameters |
 |:--------------------:|:----------:|:-----:|:------------------:|:-----------------:|:------------:|
 |    before pruned     |     246    |   65  |        54.65       |       500k        |      1x      |
-|pruned @prune_rate=0.3|     122    |  36.3 |        48.1        |        80k        |     0.5x     |
+|pruned @prune_rate=0.3|     122    |  36.3 |        49.7        |        80k        |     0.5x     |
 |pruned @prune_rate=0.5|     60.5   |  16   |        49.2        |       160k        |    0.25x     |
 |pruned @prune_rate=0.7|     31     |  8.2  |        46          |       200k        |    0.125x    |
 | tiny-yolov3(official)|     36     |  5.5  |        17.3        |                   |              |
